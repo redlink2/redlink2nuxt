@@ -1,10 +1,11 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 
-const images = ref([])
+const images = ref([]) // [{ name, alternates, display }]
 const loading = ref(true)
 const showModal = ref(false)
-const selectedImage = ref(null)
+const selectedGroup = ref(null) // The group object
+const selectedIndex = ref(0) // Index of the alternate in the group
 
 // Generate a random pastel color
 const pastelBg = ref('')
@@ -23,24 +24,73 @@ function shuffle(array) {
 	return array
 }
 
-function openModal(image) {
-	selectedImage.value = image
+function openModal(group) {
+	selectedGroup.value = group
+	selectedIndex.value = 0
 	showModal.value = true
 }
 
 function closeModal() {
 	showModal.value = false
-	selectedImage.value = null
+	selectedGroup.value = null
+	selectedIndex.value = 0
+}
+
+function selectAlternate(idx) {
+	selectedIndex.value = idx
+}
+
+function prevAlternate() {
+	if (selectedGroup.value && selectedGroup.value.alternates.length > 1) {
+		selectedIndex.value =
+			(selectedIndex.value - 1 + selectedGroup.value.alternates.length) %
+			selectedGroup.value.alternates.length
+	}
+}
+
+function nextAlternate() {
+	if (selectedGroup.value && selectedGroup.value.alternates.length > 1) {
+		selectedIndex.value =
+			(selectedIndex.value + 1) % selectedGroup.value.alternates.length
+	}
+}
+
+// Keyboard navigation for modal
+function handleKeydown(e) {
+	if (!showModal.value) return
+	if (e.key === 'ArrowLeft') {
+		prevAlternate()
+		e.preventDefault()
+	} else if (e.key === 'ArrowRight') {
+		nextAlternate()
+		e.preventDefault()
+	} else if (e.key === 'Escape') {
+		closeModal()
+		e.preventDefault()
+	}
 }
 
 onMounted(async () => {
+	window.addEventListener('keydown', handleKeydown)
 	try {
 		const res = await fetch('/gallery.json')
 		const data = await res.json()
-		images.value = shuffle(data)
+		// For each group, pick a random alternate for display
+		const withDisplay = data.map((group) => {
+			const idx = Math.floor(Math.random() * group.alternates.length)
+			return {
+				...group,
+				display: group.alternates[idx],
+			}
+		})
+		images.value = shuffle(withDisplay)
 	} finally {
 		loading.value = false
 	}
+})
+
+onBeforeUnmount(() => {
+	window.removeEventListener('keydown', handleKeydown)
 })
 </script>
 
@@ -52,53 +102,85 @@ onMounted(async () => {
 			<div class="gallery-scroll">
 				<div class="masonry-gallery">
 					<div
-						v-for="image in images"
-						:key="image.url"
+						v-for="group in images"
+						:key="group.name"
 						class="gallery-item"
 					>
 						<img
-							:src="image.url"
-							:alt="image.name"
-							:width="image.width"
-							:height="image.height"
+							:src="group.display.url"
+							:alt="group.name"
+							:width="group.display.width"
+							:height="group.display.height"
 							loading="lazy"
-							@click="openModal(image)"
+							@click="openModal(group)"
 							style="cursor: pointer"
 						/>
-						<div class="name">{{ image.name }}</div>
+						<div class="name">{{ group.name }}</div>
 					</div>
 				</div>
 			</div>
 			<!-- Modal -->
 			<div
-				v-if="showModal"
+				v-if="showModal && selectedGroup"
 				class="modal-backdrop"
 				@click.self="closeModal"
 			>
 				<div class="modal-content">
+					<!-- Carousel controls if more than one alternate -->
+					<button
+						v-if="selectedGroup.alternates.length > 1"
+						class="modal-nav left"
+						@click.stop="prevAlternate"
+						aria-label="Previous"
+					>
+						&#8592;
+					</button>
 					<img
-						v-if="selectedImage"
-						:src="selectedImage.url"
-						:alt="selectedImage.name"
+						:src="selectedGroup.alternates[selectedIndex].url"
+						:alt="selectedGroup.name"
 						class="modal-img"
 					/>
-					<div
-						class="modal-meta"
-						v-if="selectedImage"
+					<button
+						v-if="selectedGroup.alternates.length > 1"
+						class="modal-nav right"
+						@click.stop="nextAlternate"
+						aria-label="Next"
 					>
-						<strong>{{ selectedImage.name }}</strong
+						&#8594;
+					</button>
+					<div class="modal-meta">
+						<strong>{{ selectedGroup.name }}</strong
 						><br />
-						<span
-							>{{ selectedImage.width }}×{{
-								selectedImage.height
-							}}px</span
+						<span>
+							{{ selectedGroup.alternates[selectedIndex].width }}×
+							{{
+								selectedGroup.alternates[selectedIndex].height
+							}}px </span
 						><br />
-						<span
-							>{{
-								(selectedImage.size / 1024).toFixed(1)
+						<span>
+							{{
+								(
+									selectedGroup.alternates[selectedIndex]
+										.size / 1024
+								).toFixed(1)
 							}}
-							KB</span
-						>
+							KB
+						</span>
+					</div>
+					<!-- Thumbnails for alternates -->
+					<div
+						v-if="selectedGroup.alternates.length > 1"
+						class="modal-thumbs"
+					>
+						<img
+							v-for="(alt, idx) in selectedGroup.alternates"
+							:key="alt.url"
+							:src="alt.url"
+							:alt="`${selectedGroup.name} alternate ${idx + 1}`"
+							class="thumb"
+							:class="{ active: idx === selectedIndex }"
+							@click.stop="selectAlternate(idx)"
+						/>
 					</div>
 					<button
 						class="modal-close"
@@ -183,7 +265,7 @@ onMounted(async () => {
 .modal-close {
 	position: absolute;
 	top: 0.5em;
-	right: -2.5em; /* Move further right, off the image */
+	right: -2.5em;
 	background: none;
 	border: none;
 	color: #fff;
@@ -191,5 +273,42 @@ onMounted(async () => {
 	cursor: pointer;
 	line-height: 1;
 	z-index: 2;
+}
+.modal-thumbs {
+	display: flex;
+	gap: 0.5em;
+	margin-top: 1em;
+	justify-content: center;
+	flex-wrap: wrap;
+}
+.thumb {
+	width: 48px;
+	height: 48px;
+	object-fit: cover;
+	border-radius: 4px;
+	border: 2px solid transparent;
+	cursor: pointer;
+	transition: border 0.2s;
+}
+.thumb.active {
+	border: 2px solid #fff;
+}
+.modal-nav {
+	position: absolute;
+	top: 50%;
+	transform: translateY(-50%);
+	background: rgba(0, 0, 0, 0.5);
+	border: none;
+	color: #fff;
+	font-size: 2em;
+	cursor: pointer;
+	padding: 0.2em 0.5em;
+	z-index: 2;
+}
+.modal-nav.left {
+	left: -2em;
+}
+.modal-nav.right {
+	right: -2em;
 }
 </style>

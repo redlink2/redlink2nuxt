@@ -22,12 +22,21 @@ function getImageFiles(dir) {
 		)
 }
 
+function getGroupName(filename) {
+	const name = path.parse(filename).name
+	const dashIdx = name.indexOf('-')
+	if (dashIdx !== -1) {
+		return name.substring(0, dashIdx)
+	}
+	return name
+}
+
 function buildGalleryJson(files) {
-	return files.map((filename) => {
+	const grouped = {}
+	files.forEach((filename) => {
 		const filepath = path.join(galleryDir, filename)
 		let dimensions = { width: null, height: null }
 		try {
-			// Pass the file path string directly
 			dimensions = imageSize(filepath)
 		} catch (err) {
 			console.warn(
@@ -36,15 +45,24 @@ function buildGalleryJson(files) {
 			)
 		}
 		const stats = fs.statSync(filepath)
-		return {
-			name: path.parse(filename).name,
+		const groupName = getGroupName(filename)
+		const entry = {
 			url: `/gallery/${filename}`,
 			width: dimensions.width,
 			height: dimensions.height,
 			type: path.extname(filename).slice(1),
 			size: stats.size, // in bytes
 		}
+		if (!grouped[groupName]) {
+			grouped[groupName] = {
+				name: groupName,
+				alternates: [entry],
+			}
+		} else {
+			grouped[groupName].alternates.push(entry)
+		}
 	})
+	return Object.values(grouped)
 }
 
 function main() {
