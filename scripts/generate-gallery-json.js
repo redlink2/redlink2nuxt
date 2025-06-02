@@ -1,10 +1,18 @@
-const fs = require('fs')
-const path = require('path')
-const sizeOf = require('image-size')
+import fs from 'fs'
+import path from 'path'
+import { imageSize } from 'image-size'
 
-const galleryDir = path.join(__dirname, '..', 'public', 'gallery')
-const outputJson = path.join(__dirname, '..', 'public', 'gallery.json')
-const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp']
+const galleryDir = path.join(process.cwd(), 'public', 'gallery')
+const outputJson = path.join(process.cwd(), 'public', 'gallery.json')
+const imageExtensions = [
+	'.jpg',
+	'.jpeg',
+	'.png',
+	'.gif',
+	'.webp',
+	'.bmp',
+	'.svg',
+]
 
 function getImageFiles(dir) {
 	return fs
@@ -19,7 +27,8 @@ function buildGalleryJson(files) {
 		const filepath = path.join(galleryDir, filename)
 		let dimensions = { width: null, height: null }
 		try {
-			dimensions = sizeOf(filepath)
+			// Pass the file path string directly
+			dimensions = imageSize(filepath)
 		} catch (err) {
 			console.warn(
 				`Could not get dimensions for ${filename}:`,

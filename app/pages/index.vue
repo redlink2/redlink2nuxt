@@ -31,7 +31,7 @@ const color = useState(
 			{{ runtimeConfig.public.helloText }}
 		</h1>
 		<NuxtLink
-			to="/"
+			to="/gallery"
 			external
 		>
 			refresh

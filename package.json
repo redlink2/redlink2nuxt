@@ -6,7 +6,7 @@
 		"build": "nuxt build",
 		"dev": "nuxt dev",
 		"pregenerate": "node scripts/generate-gallery-json.js",
-		"generate": "npx pregenerate && nuxt generate",
+		"generate": "yarn pregenerate && nuxt generate",
 		"preview": "npx nuxthub preview",
 		"deploy": "npx nuxthub deploy",
 		"postinstall": "nuxt prepare",
@@ -22,6 +22,7 @@
 	"devDependencies": {
 		"@nuxt/eslint-config": "^1.3.0",
 		"eslint": "^9.25.1",
+		"image-size": "1.0.0",
 		"typescript": "^5.8.3",
 		"vue-tsc": "^2.2.10",
 		"wrangler": "^4.12.1"
