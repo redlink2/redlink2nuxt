@@ -95,10 +95,16 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-	<div :style="{ background: pastelBg, minHeight: '100vh' }">
+	<div
+		:style="{ background: pastelBg, minHeight: '100vh' }"
+		class="gallery-root"
+	>
 		<h1>Gallery</h1>
 		<div v-if="loading">Loading...</div>
-		<div v-else>
+		<div
+			v-else
+			class="gallery-flex"
+		>
 			<div class="gallery-scroll">
 				<div class="masonry-gallery">
 					<div
@@ -195,10 +201,22 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.gallery-root {
+	display: flex;
+	flex-direction: column;
+	min-height: 100vh;
+}
+.gallery-flex {
+	display: flex;
+	flex-direction: column;
+	flex: 1 1 auto;
+	min-height: 0;
+}
 .gallery-scroll {
-	height: 80vh;
+	flex: 1 1 auto;
 	overflow-y: auto;
 	overflow-x: hidden;
+	min-height: 0;
 }
 .masonry-gallery {
 	column-count: 3;
