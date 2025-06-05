@@ -27,14 +27,12 @@ const color = useState(
 
 <template>
 	<div class="centered">
-		<h1 :style="{ color }">
-			{{ runtimeConfig.public.helloText }}
-		</h1>
+		<h1 :style="{ color }">Big things coming soon!</h1>
 		<NuxtLink
 			to="/gallery"
 			external
 		>
-			refresh
+			to the gallery!
 		</NuxtLink>
 	</div>
 </template>
